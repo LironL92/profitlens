@@ -1,7 +1,7 @@
 'use client'
 
+import React, { useState } from 'react'
 import { ArrowRight, Calculator, TrendingUp, Clock, Loader2 } from 'lucide-react'
-import { useState } from 'react'
 
 // TypeScript declaration for gtag
 declare global {
@@ -114,14 +114,14 @@ export default function OnlyFansCreatorLandingPage() {
       ) : (
         <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
           <div className="text-green-800 font-semibold text-lg mb-2">
-            ✅ You're on the list!
+            ✅ You&apos;re on the list!
           </div>
           <div className="text-green-600 mb-2">
-            We'll notify you when ProfitLens launches for creators.
+            We&apos;ll notify you when ProfitLens launches for creators.
           </div>
           {waitlistPosition && (
             <div className="text-green-700 text-sm font-medium">
-              You're #{waitlistPosition} on the waitlist
+              You&apos;re #{waitlistPosition} on the waitlist
             </div>
           )}
         </div>
@@ -174,21 +174,21 @@ export default function OnlyFansCreatorLandingPage() {
           <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Spreadsheet Hell</h3>
                   <p className="text-gray-600">Manually tracking OnlyFans + ManyVids + cam sites + tips across 5 different spreadsheets</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Tax Season Panic</h3>
                   <p className="text-gray-600">Scrambling to find receipts and getting hit with surprise quarterly payments of $8,000+</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
                 <div>
                   <h3 className="font-semibold text-gray-900">QuickBooks Confusion</h3>
                   <p className="text-gray-600">&ldquo;Why is this so complicated?&rdquo; — trying to explain why lingerie is a business expense</p>
@@ -197,21 +197,21 @@ export default function OnlyFansCreatorLandingPage() {
             </div>
             <div className="space-y-6">
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Cash Flow Guessing</h3>
                   <p className="text-gray-600">Never knowing your real profit after platform fees, expenses, and taxes</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Time Drain</h3>
                   <p className="text-gray-600">Spending 20+ hours per month on financial admin instead of creating content</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
                 <div>
                   <h3 className="font-semibold text-gray-900">Missing Deductions</h3>
                   <p className="text-gray-600">Leaving thousands on the table because you don&apos;t know what&apos;s actually deductible</p>

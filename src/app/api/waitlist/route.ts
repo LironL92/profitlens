@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { headers } from 'next/headers'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,15 +18,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get request metadata
-    const headersList = headers()
-    const userAgent = headersList.get('user-agent')
-    const forwardedFor = headersList.get('x-forwarded-for')
-    const realIp = headersList.get('x-real-ip')
+    // Get request metadata - Fixed: removed headers() call
+    const userAgent = request.headers.get('user-agent')
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    const realIp = request.headers.get('x-real-ip')
     const ipAddress = forwardedFor?.split(',')[0] || realIp || null
 
     // Insert into waitlist
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('waitlist_signups')
       .insert({
         email: email.toLowerCase().trim(),
@@ -47,7 +45,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { 
             error: 'Email already registered', 
-            message: 'You\'re already on our waitlist! We\'ll notify you when we launch.' 
+            message: "You're already on our waitlist! We'll notify you when we launch." 
           }, 
           { status: 409 }
         )

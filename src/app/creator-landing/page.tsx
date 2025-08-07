@@ -2,6 +2,7 @@
 
 import { ArrowRight, Calculator, TrendingUp, Clock } from 'lucide-react'
 import { useState } from 'react'
+import Link from 'next/link'
 
 export default function OnlyFansCreatorLandingPage() {
   const [email, setEmail] = useState('')
@@ -35,7 +36,7 @@ export default function OnlyFansCreatorLandingPage() {
       } else {
         setError(data.error || 'Failed to join waitlist. Please try again.')
       }
-    } catch (err) {
+    } catch {
       setError('Network error. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
@@ -53,12 +54,12 @@ export default function OnlyFansCreatorLandingPage() {
               <span className="ml-2 text-xl font-semibold text-gray-900">ProfitLens</span>
             </div>
             <div className="flex items-center space-x-4">
-              <a
+              <Link
                 href="/"
                 className="text-gray-600 hover:text-gray-900 font-medium text-sm"
               >
                 ← Main Site
-              </a>
+              </Link>
               <div className="text-sm text-gray-600 font-medium">
                 For OnlyFans Creators
               </div>
@@ -117,9 +118,9 @@ export default function OnlyFansCreatorLandingPage() {
               </form>
             ) : (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="text-green-800 font-semibold">✅ You're on the list!</div>
+                <div className="text-green-800 font-semibold">✅ You&apos;re on the list!</div>
                 <div className="text-green-600 text-sm mt-1">
-                  We'll notify you when ProfitLens launches for creators.
+                  We&apos;ll notify you when ProfitLens launches for creators.
                 </div>
               </div>
             )}
@@ -152,7 +153,7 @@ export default function OnlyFansCreatorLandingPage() {
                 <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
                 <div>
                   <h3 className="font-semibold text-gray-900">QuickBooks Confusion</h3>
-                  <p className="text-gray-600">"Why is this so complicated?" — trying to explain why lingerie is a business expense</p>
+                  <p className="text-gray-600">&ldquo;Why is this so complicated?&rdquo; — trying to explain why lingerie is a business expense</p>
                 </div>
               </div>
             </div>
@@ -175,7 +176,7 @@ export default function OnlyFansCreatorLandingPage() {
                 <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
                 <div>
                   <h3 className="font-semibold text-gray-900">Missing Deductions</h3>
-                  <p className="text-gray-600">Leaving thousands on the table because you don't know what's actually deductible</p>
+                  <p className="text-gray-600">Leaving thousands on the table because you don&apos;t know what&apos;s actually deductible</p>
                 </div>
               </div>
             </div>
@@ -237,15 +238,15 @@ export default function OnlyFansCreatorLandingPage() {
             <div className="grid md:grid-cols-2 gap-8 text-left">
               <div className="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
                 <p className="text-lg italic mb-4">
-                  "Finally, someone who understands that my ring light is a business expense, 
-                  not a personal purchase. Can't wait for this!"
+                  &ldquo;Finally, someone who understands that my ring light is a business expense, 
+                  not a personal purchase. Can&apos;t wait for this!&rdquo;
                 </p>
                 <p className="font-semibold">— Maya, Top 1% Creator</p>
               </div>
               <div className="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
                 <p className="text-lg italic mb-4">
-                  "I spend more time on spreadsheets than I do creating content. 
-                  This could be a game-changer for my business."
+                  &ldquo;I spend more time on spreadsheets than I do creating content. 
+                  This could be a game-changer for my business.&rdquo;
                 </p>
                 <p className="font-semibold">— Alex, 6-Figure Creator</p>
               </div>

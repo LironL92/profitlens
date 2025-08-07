@@ -5,14 +5,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy initialization to avoid build-time errors
+let supabase: ReturnType<typeof createClient> | null = null;
+let stripe: Stripe | null = null;
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-07-30.basil',
-});
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return supabase;
+}
+
+function getStripe() {
+  if (!stripe) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-07-30.basil',
+    });
+  }
+  return stripe;
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -28,8 +42,11 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔄 Starting direct Stripe sync for user:', userId);
 
+    const supabaseClient = getSupabase();
+    const stripeClient = getStripe();
+
     // Step 1: Ensure user has a connected account record
-    const { data: existingAccount, error: accountError } = await supabase
+    const { data: existingAccount, error: accountError } = await supabaseClient
       .from('connected_accounts')
       .select('*')
       .eq('user_id', userId)
@@ -41,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     if (accountError || !connectedAccount) {
       // Create a connected account record for direct stripe access
-      const { data: newAccount, error: createError } = await supabase
+      const { data: newAccount, error: createError } = await supabaseClient
         .from('connected_accounts')
         .insert([{
           user_id: userId,
@@ -66,7 +83,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 2: Fetch balance transactions directly (no connected account)
-    const balanceTransactions = await stripe.balanceTransactions.list({
+    const balanceTransactions = await stripeClient.balanceTransactions.list({
       limit: 100,
       // Get all transactions for testing
     });
@@ -124,7 +141,7 @@ export async function GET(request: NextRequest) {
     console.log(`📝 Processing ${transactionsToInsert.length} transactions (including fees)`);
 
     // Insert into database
-    const { data: insertedData, error: insertError } = await supabase
+    const { data: insertedData, error: insertError } = await supabaseClient
       .from('transactions')
       .upsert(transactionsToInsert, {
         onConflict: 'platform,external_id',

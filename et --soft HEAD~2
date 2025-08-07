@@ -1,0 +1,3 @@
+[33medc59e4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Security: Replace hardcoded Stripe API keys with environment variables
+[33m43b7065[m Add OnlyFans creator landing page with waitlist integration
+[33mf655e98[m[33m ([m[1;31morigin/main[m[33m)[m Initial commit: Next.js with TypeScript and Tailwind

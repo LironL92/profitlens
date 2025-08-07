@@ -1,28 +1,46 @@
 'use client'
 
-import React, { useState } from 'react'
-import { ArrowRight, Calculator, TrendingUp, Clock, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { 
+  TrendingUp, 
+  Clock, 
+  Shield, 
+  CheckCircle, 
+  Mail, 
+  Star,
+  DollarSign,
+  Calculator,
+  FileText,
+  AlertTriangle,
+  Users,
+  Zap
+} from 'lucide-react'
 
-// TypeScript declaration for gtag
-declare global {
-  interface Window {
-    gtag: (command: string, action: string, params: Record<string, unknown>) => void
-  }
+interface WaitlistFormData {
+  email: string
+  isLoading: boolean
+  isSuccess: boolean
+  error: string
+  waitlistPosition?: number
 }
 
-export default function OnlyFansCreatorLandingPage() {
-  const [email, setEmail] = useState('')
-  const [isSubmitted, setIsSubmitted] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [waitlistPosition, setWaitlistPosition] = useState(null)
+export default function LandingPage() {
+  const [formData, setFormData] = useState<WaitlistFormData>({
+    email: '',
+    isLoading: false,
+    isSuccess: false,
+    error: ''
+  })
 
-  const handleWaitlistSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (isLoading) return
+    
+    if (!formData.email) {
+      setFormData(prev => ({ ...prev, error: 'Please enter your email address' }))
+      return
+    }
 
-    setIsLoading(true)
-    setError('')
+    setFormData(prev => ({ ...prev, isLoading: true, error: '' }))
 
     try {
       const response = await fetch('/api/waitlist', {
@@ -31,342 +49,448 @@ export default function OnlyFansCreatorLandingPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email,
+          email: formData.email,
           source: 'landing_page',
-          referralSource: document.referrer || 'direct',
+          creatorType: 'onlyfans'
         }),
       })
 
       const data = await response.json()
 
-      if (!response.ok) {
-        if (response.status === 409) {
-          // Email already exists
-          setError(data.message)
-        } else {
-          setError(data.error || 'Something went wrong. Please try again.')
-        }
-        return
+      if (response.ok) {
+        setFormData(prev => ({
+          ...prev,
+          isSuccess: true,
+          isLoading: false,
+          waitlistPosition: data.waitlistPosition
+        }))
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          error: data.error || 'Something went wrong. Please try again.',
+          isLoading: false
+        }))
       }
-
-      setIsSubmitted(true)
-      setWaitlistPosition(data.waitlistPosition)
-      
-      // Track successful signup (analytics)
-      if (typeof window !== 'undefined' && window.gtag) {
-        window.gtag('event', 'waitlist_signup', {
-          event_category: 'engagement',
-          event_label: 'onlyfans_creator_landing'
-        })
-      }
-
     } catch (err) {
-      setError('Network error. Please check your connection and try again.')
-      console.error('Waitlist signup error:', err)
-    } finally {
-      setIsLoading(false)
+      setFormData(prev => ({
+        ...prev,
+        error: 'Network error. Please check your connection and try again.',
+        isLoading: false
+      }))
     }
   }
 
   const WaitlistForm = () => (
-    <div className="max-w-md mx-auto mb-12">
-      {!isSubmitted ? (
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none disabled:bg-gray-50"
-              required
-              disabled={isLoading}
-            />
-            <button
-              onClick={handleWaitlistSubmit}
-              disabled={isLoading || !email}
-              className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                  Joining...
-                </>
-              ) : (
-                <>
-                  Join Waitlist
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-              )}
-            </button>
-          </div>
-          
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <div className="text-red-800 text-sm">{error}</div>
-            </div>
+    <div className="w-full max-w-md mx-auto">
+      {formData.isSuccess ? (
+        <div className="text-center p-6 bg-green-50 rounded-2xl border border-green-200">
+          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-green-800 mb-2">You&apos;re on the list!</h3>
+                      <p className="text-green-700 mb-2">
+              Welcome to the ProfitLens waitlist. We&apos;ll notify you when we launch.
+            </p>
+          {formData.waitlistPosition && (
+            <p className="text-sm text-green-600">
+              You&apos;re #{formData.waitlistPosition} on the waitlist
+            </p>
           )}
-          
-          <p className="text-sm text-gray-500 text-center">
-            Free for the first 100 creators • No spam, ever
-          </p>
         </div>
       ) : (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-          <div className="text-green-800 font-semibold text-lg mb-2">
-            ✅ You&apos;re on the list!
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input
+              type="email"
+              placeholder="Enter your email address"
+              value={formData.email}
+              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value, error: '' }))}
+              className="w-full px-4 py-4 rounded-xl border border-gray-300 focus:ring-4 focus:ring-brand-pink/30 focus:border-brand-pink outline-none text-lg"
+              disabled={formData.isLoading}
+              required
+            />
           </div>
-          <div className="text-green-600 mb-2">
-            We&apos;ll notify you when ProfitLens launches for creators.
-          </div>
-          {waitlistPosition && (
-            <div className="text-green-700 text-sm font-medium">
-              You&apos;re #{waitlistPosition} on the waitlist
+          
+          {formData.error && (
+            <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+              <p className="text-red-800 text-sm">{formData.error}</p>
             </div>
           )}
-        </div>
+          
+          <button
+            type="submit"
+            disabled={formData.isLoading}
+            className="w-full btn-primary text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {formData.isLoading ? (
+              <span className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                Joining waitlist...
+              </span>
+            ) : (
+              'Join the Waitlist'
+            )}
+          </button>
+          
+          <p className="text-sm text-gray-600 text-center">
+            Free forever. No spam. Unsubscribe anytime.
+          </p>
+        </form>
       )}
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-sm border-b border-pink-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full" />
-              <span className="ml-2 text-xl font-semibold text-gray-900">ProfitLens</span>
-            </div>
-            <div className="text-sm text-gray-600 font-medium">
-              For OnlyFans Creators
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center">
-          <div className="inline-flex items-center bg-pink-100 text-pink-800 text-sm font-medium px-4 py-2 rounded-full mb-6">
-            <span>🎉 Built specifically for OnlyFans creators</span>
+      <section className="gradient-bg text-white section-padding">
+        <div className="container-custom text-center">
+          <div className="inline-flex items-center bg-white/10 rounded-full px-4 py-2 mb-8 backdrop-blur-sm">
+            <Shield className="h-4 w-4 mr-2" />
+            <span className="text-sm font-medium">Built specifically for OnlyFans creators</span>
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            Finally,
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-600">
-              Financial Control
-            </span>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+            Finally, Financial Control
           </h1>
           
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl md:text-2xl mb-12 max-w-4xl mx-auto leading-relaxed opacity-90">
             The financial dashboard built for OnlyFans creators. Track your real profit across all platforms, 
             optimize your taxes, and focus on what you do best — creating content.
           </p>
-
-          <WaitlistForm />
-        </div>
-
-        {/* Problem Section */}
-        <div className="mt-20 bg-white rounded-2xl shadow-lg p-8 md:p-12">
-          <h2 className="text-3xl font-bold text-center mb-8">Sound Familiar?</h2>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Spreadsheet Hell</h3>
-                  <p className="text-gray-600">Manually tracking OnlyFans + ManyVids + cam sites + tips across 5 different spreadsheets</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Tax Season Panic</h3>
-                  <p className="text-gray-600">Scrambling to find receipts and getting hit with surprise quarterly payments of $8,000+</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">QuickBooks Confusion</h3>
-                  <p className="text-gray-600">&ldquo;Why is this so complicated?&rdquo; — trying to explain why lingerie is a business expense</p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-6">
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Cash Flow Guessing</h3>
-                  <p className="text-gray-600">Never knowing your real profit after platform fees, expenses, and taxes</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Time Drain</h3>
-                  <p className="text-gray-600">Spending 20+ hours per month on financial admin instead of creating content</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" />
-                <div>
-                  <h3 className="font-semibold text-gray-900">Missing Deductions</h3>
-                  <p className="text-gray-600">Leaving thousands on the table because you don&apos;t know what&apos;s actually deductible</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Solution Features */}
-        <div className="mt-20">
-          <h2 className="text-3xl font-bold text-center mb-4">
-            Finally, a Tool That Gets It
-          </h2>
-          <p className="text-xl text-gray-600 text-center mb-12 max-w-3xl mx-auto">
-            ProfitLens understands your business. No judgment, no confusion — just professional financial management 
-            designed specifically for adult content creators.
-          </p>
           
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="w-12 h-12 bg-gradient-to-br from-pink-100 to-pink-200 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="h-6 w-6 text-pink-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Real Profit Tracking</h3>
-              <p className="text-gray-600">
-                See your actual take-home after platform fees, expenses, and taxes. 
-                OnlyFans + ManyVids + cam sites all in one place.
-              </p>
+          <WaitlistForm />
+          
+          <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-white/80">
+            <div className="flex items-center">
+              <Users className="h-5 w-5 mr-2" />
+              <span>500+ creators waiting</span>
             </div>
-            
-            <div className="text-center p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Calculator className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Smart Tax Planning</h3>
-              <p className="text-gray-600">
-                Quarterly payment reminders, self-employment tax calculations, 
-                and creator-specific deduction guidance.
-              </p>
+            <div className="flex items-center">
+              <Clock className="h-5 w-5 mr-2" />
+              <span>Launching Q2 2024</span>
             </div>
-            
-            <div className="text-center p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow">
-              <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Clock className="h-6 w-6 text-indigo-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Time Savings</h3>
-              <p className="text-gray-600">
-                Upload your OnlyFans statements, connect your accounts, 
-                and get back to creating. 5 minutes vs. 5 hours.
-              </p>
+            <div className="flex items-center">
+              <Shield className="h-5 w-5 mr-2" />
+              <span>Bank-level security</span>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Social Proof */}
-        <div className="mt-20 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl p-8 md:p-12 text-white">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-8">
-              Join 500+ Creators Already on the Waitlist
+      {/* Problem Section */}
+      <section className="section-padding bg-white">
+        <div className="container-custom">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Sound <span className="gradient-text">Familiar?</span>
             </h2>
-            <div className="grid md:grid-cols-2 gap-8 text-left">
-              <div className="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
-                <p className="text-lg italic mb-4">
-                  &ldquo;Finally, someone who understands that my ring light is a business expense, 
-                  not a personal purchase. Can&apos;t wait for this!&rdquo;
-                </p>
-                <p className="font-semibold">— Maya, Top 1% Creator</p>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Every OnlyFans creator faces these financial headaches. You&apos;re not alone.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                icon: FileText,
+                title: "Spreadsheet Hell",
+                description: "Manually tracking OnlyFans, Fansly, ManyVids, and custom content across dozens of messy spreadsheets."
+              },
+              {
+                icon: AlertTriangle,
+                title: "Tax Season Panic",
+                description: "Scrambling to find receipts and calculate quarterly payments, often facing surprise tax bills."
+              },
+              {
+                icon: Calculator,
+                title: "QuickBooks Confusion",
+                description: "Wrestling with complex accounting software that wasn't designed for content creators."
+              },
+              {
+                icon: DollarSign,
+                title: "Cash Flow Guessing",
+                description: "Never knowing your real profit after platform fees, chargebacks, and business expenses."
+              },
+              {
+                icon: Clock,
+                title: "Time Drain",
+                description: "Spending 20+ hours monthly on admin work instead of creating content that makes money."
+              },
+              {
+                icon: TrendingUp,
+                title: "Missing Deductions",
+                description: "Leaving thousands on the table by not tracking legitimate business expenses properly."
+              }
+            ].map((problem, index) => (
+              <div key={index} className="card p-8 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-2xl mb-6">
+                  <problem.icon className="h-8 w-8 text-red-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-4">{problem.title}</h3>
+                <p className="text-gray-600">{problem.description}</p>
               </div>
-              <div className="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
-                <p className="text-lg italic mb-4">
-                  &ldquo;I spend more time on spreadsheets than I do creating content. 
-                  This could be a game-changer for my business.&rdquo;
-                </p>
-                <p className="font-semibold">— Alex, 6-Figure Creator</p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Solution Section */}
+      <section className="section-padding bg-gray-50">
+        <div className="container-custom">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Finally, a Tool That <span className="gradient-text">Gets It</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              ProfitLens is built specifically for content creators. No more generic solutions that don't understand your business.
+            </p>
+          </div>
+          
+          <div className="grid lg:grid-cols-3 gap-12">
+            {[
+              {
+                icon: TrendingUp,
+                title: "Real Profit Tracking",
+                description: "Connect all your platforms (OnlyFans, Fansly, ManyVids) and see your actual profit after fees, chargebacks, and expenses.",
+                features: [
+                  "Auto-sync with all major platforms",
+                  "Real-time profit calculations",
+                  "Expense categorization",
+                  "Chargeback tracking"
+                ]
+              },
+              {
+                icon: Calculator,
+                title: "Smart Tax Planning",
+                description: "Never get surprised by tax season again. Get quarterly reminders and accurate calculations built for creators.",
+                features: [
+                  "Quarterly tax estimates",
+                  "Deduction optimization",
+                  "1099 preparation",
+                  "State tax compliance"
+                ]
+              },
+              {
+                icon: Zap,
+                title: "Time Savings",
+                description: "What used to take 5 hours now takes 5 minutes. Spend more time creating, less time on paperwork.",
+                features: [
+                  "Automated reporting",
+                  "One-click reconciliation",
+                  "Smart categorization",
+                  "Export for accountants"
+                ]
+              }
+            ].map((solution, index) => (
+              <div key={index} className="card p-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 gradient-bg rounded-2xl mb-6">
+                  <solution.icon className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-semibold mb-4">{solution.title}</h3>
+                <p className="text-gray-600 mb-6">{solution.description}</p>
+                <ul className="space-y-3">
+                  {solution.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-center text-gray-700">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof Section */}
+      <section className="section-padding bg-white">
+        <div className="container-custom">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Join <span className="gradient-text">500+ Creators</span> Already on the Waitlist
+            </h2>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="card p-8">
+              <div className="flex items-center mb-6">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-current" />
+                  ))}
+                </div>
+              </div>
+              <p className="text-gray-700 mb-6 text-lg italic">
+                              &quot;I&apos;ve been waiting for something like this! Currently using 3 different spreadsheets 
+              and QuickBooks. It&apos;s a nightmare during tax season.&quot;
+              </p>
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-brand-pink to-brand-purple rounded-full flex items-center justify-center text-white font-semibold">
+                  M
+                </div>
+                <div className="ml-4">
+                  <p className="font-semibold">Maya</p>
+                  <p className="text-gray-600">Top 1% Creator</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="card p-8">
+              <div className="flex items-center mb-6">
+                <div className="flex text-yellow-400">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-current" />
+                  ))}
+                </div>
+              </div>
+              <p className="text-gray-700 mb-6 text-lg italic">
+                              &quot;Finally! A tool that understands that we&apos;re real businesses. Can&apos;t wait to ditch 
+              my current messy system.&quot;
+              </p>
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-brand-purple to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
+                  A
+                </div>
+                <div className="ml-4">
+                  <p className="font-semibold">Alex</p>
+                  <p className="text-gray-600">6-Figure Creator</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Pricing Preview */}
-        <div className="mt-20">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Pricing That Makes Sense
-          </h2>
+      {/* Pricing Preview Section */}
+      <section className="section-padding bg-gray-50">
+        <div className="container-custom">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-6">
+              Simple, <span className="gradient-text">Creator-Friendly</span> Pricing
+            </h2>
+            <p className="text-xl text-gray-600">
+              No surprises. No hidden fees. Just tools that help you make more money.
+            </p>
+          </div>
+          
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg p-8 border hover:shadow-xl transition-shadow">
-              <h3 className="text-xl font-semibold mb-2">Free</h3>
-              <p className="text-3xl font-bold mb-4">$0<span className="text-lg font-normal text-gray-600">/month</span></p>
-              <p className="text-gray-600 mb-6">Perfect for getting started</p>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Basic profit tracking</li>
-                <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>OnlyFans CSV import</li>
-                <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Tax estimation</li>
-                <li className="flex items-center"><span className="text-gray-400 mr-2">×</span>Multi-platform sync</li>
-              </ul>
-            </div>
-            
-            <div className="bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl shadow-lg p-8 text-white relative transform scale-105">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 px-4 py-1 rounded-full text-sm font-semibold">
-                Most Popular
+            {[
+              {
+                name: "Free",
+                price: "$0",
+                description: "Perfect for getting started",
+                features: [
+                  "1 platform connection",
+                  "Basic profit tracking",
+                  "Monthly reports",
+                  "Email support"
+                ],
+                cta: "Start Free",
+                popular: false
+              },
+              {
+                name: "Creator",
+                price: "$29",
+                description: "Most popular for active creators",
+                features: [
+                  "Unlimited platform connections",
+                  "Real-time profit tracking",
+                  "Tax planning tools",
+                  "Expense categorization",
+                  "Quarterly reports",
+                  "Priority support"
+                ],
+                cta: "Join Waitlist",
+                popular: true
+              },
+              {
+                name: "Pro",
+                price: "$59",
+                description: "For high-volume creators",
+                features: [
+                  "Everything in Creator",
+                  "Advanced analytics",
+                  "Custom reporting",
+                  "Accountant collaboration",
+                  "API access",
+                  "Phone support"
+                ],
+                cta: "Join Waitlist",
+                popular: false
+              }
+            ].map((plan, index) => (
+              <div key={index} className={`card p-8 relative ${plan.popular ? 'ring-2 ring-brand-pink' : ''}`}>
+                {plan.popular && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-brand-pink to-brand-purple text-white px-4 py-2 rounded-full text-sm font-semibold">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+                
+                <div className="text-center mb-8">
+                  <h3 className="text-2xl font-semibold mb-2">{plan.name}</h3>
+                  <div className="mb-4">
+                    <span className="text-4xl font-bold">{plan.price}</span>
+                    {plan.price !== "$0" && <span className="text-gray-600">/month</span>}
+                  </div>
+                  <p className="text-gray-600">{plan.description}</p>
+                </div>
+                
+                <ul className="space-y-4 mb-8">
+                  {plan.features.map((feature, featureIndex) => (
+                    <li key={featureIndex} className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                      <span className="text-gray-700">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                
+                <button className={plan.popular ? 'btn-primary w-full' : 'btn-secondary w-full'}>
+                  {plan.cta}
+                </button>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Creator</h3>
-              <p className="text-3xl font-bold mb-4">$29<span className="text-lg font-normal opacity-80">/month</span></p>
-              <p className="opacity-80 mb-6">For growing creators</p>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center"><span className="text-green-300 mr-2">✓</span>Everything in Free</li>
-                <li className="flex items-center"><span className="text-green-300 mr-2">✓</span>All platform connections</li>
-                <li className="flex items-center"><span className="text-green-300 mr-2">✓</span>Advanced tax planning</li>
-                <li className="flex items-center"><span className="text-green-300 mr-2">✓</span>Mobile app</li>
-              </ul>
-            </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-8 border hover:shadow-xl transition-shadow">
-              <h3 className="text-xl font-semibold mb-2">Pro</h3>
-              <p className="text-3xl font-bold mb-4">$59<span className="text-lg font-normal text-gray-600">/month</span></p>
-              <p className="text-gray-600 mb-6">For established creators</p>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Everything in Creator</li>
-                <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>1099 preparation</li>
-                <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Accountant reports</li>
-                <li className="flex items-center"><span className="text-green-500 mr-2">✓</span>Priority support</li>
-              </ul>
-            </div>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Final CTA */}
-        <div className="mt-20 text-center">
-          <h2 className="text-3xl font-bold mb-4">
+      {/* Final CTA Section */}
+      <section className="gradient-bg text-white section-padding">
+        <div className="container-custom text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-6">
             Ready to Take Control of Your Finances?
           </h2>
-          <p className="text-xl text-gray-600 mb-8">
-            Join the waitlist and be the first to know when ProfitLens launches.
+          <p className="text-xl mb-12 max-w-3xl mx-auto opacity-90">
+            Join hundreds of creators who are tired of financial chaos. Get early access to ProfitLens 
+            and start making smarter money decisions.
           </p>
           
           <WaitlistForm />
+          
+          <div className="mt-12 text-white/80">
+            <p className="flex items-center justify-center">
+              <Mail className="h-5 w-5 mr-2" />
+              We&apos;ll only email you when ProfitLens is ready. No spam, ever.
+            </p>
+          </div>
         </div>
-      </main>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="container-custom">
           <div className="text-center">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full" />
-              <span className="ml-2 text-xl font-semibold">ProfitLens</span>
-            </div>
-            <p className="text-gray-400 mb-4">
-              Financial management built for OnlyFans creators
+            <h3 className="text-2xl font-bold gradient-text mb-4">ProfitLens</h3>
+            <p className="text-gray-400 mb-8">
+              The financial dashboard built for OnlyFans creators
             </p>
-            <div className="flex justify-center space-x-6 text-sm text-gray-400">
-              <button className="hover:text-white transition-colors">Privacy Policy</button>
-              <button className="hover:text-white transition-colors">Terms of Service</button>
-              <button className="hover:text-white transition-colors">Contact</button>
+            <div className="flex justify-center space-x-8 text-sm text-gray-400">
+              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-white transition-colors">Contact</a>
+            </div>
+            <div className="mt-8 pt-8 border-t border-gray-800 text-gray-500 text-sm">
+              © 2024 ProfitLens. All rights reserved.
             </div>
           </div>
         </div>

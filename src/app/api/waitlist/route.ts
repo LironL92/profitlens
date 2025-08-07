@@ -1,123 +1,186 @@
-import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { supabase, supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
+import { headers } from 'next/headers'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role for server operations
-)
+// Email validation regex
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+// POST /api/waitlist - Add email to waitlist
 export async function POST(request: NextRequest) {
   try {
-    const { email, source = 'landing_page', referralSource, estimatedRevenue } = await request.json()
-    
-    // Validate email
-    if (!email || !email.includes('@')) {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
       return NextResponse.json(
-        { error: 'Valid email is required' }, 
+        { error: 'Database is not configured. Please check your environment variables.' },
+        { status: 500 }
+      )
+    }
+    const body = await request.json()
+    const { email, source = 'landing_page', creatorType = 'onlyfans', estimatedRevenue, referralSource } = body
+
+    // Validate email
+    if (!email || !emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: 'Please enter a valid email address' },
         { status: 400 }
       )
     }
 
-    // Get request metadata - Fixed: removed headers() call
-    const userAgent = request.headers.get('user-agent')
-    const forwardedFor = request.headers.get('x-forwarded-for')
-    const realIp = request.headers.get('x-real-ip')
-    const ipAddress = forwardedFor?.split(',')[0] || realIp || null
+    // Get request metadata
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'unknown'
+    const userAgent = headersList.get('user-agent') || 'unknown'
 
-    // Insert into waitlist
-    const { data, error } = await supabase
+    // Check if email already exists
+    const { data: existingSignup } = await supabase
+      .from('waitlist_signups')
+      .select('email')
+      .eq('email', email.toLowerCase())
+      .single()
+
+    if (existingSignup) {
+      return NextResponse.json(
+        { 
+          error: 'You\'re already on the waitlist! We\'ll notify you when ProfitLens is ready.',
+          isAlreadySignedUp: true 
+        },
+        { status: 409 }
+      )
+    }
+
+    // Insert new signup
+    const { data: newSignup, error: insertError } = await supabase
       .from('waitlist_signups')
       .insert({
-        email: email.toLowerCase().trim(),
+        email: email.toLowerCase(),
         source,
-        creator_type: 'onlyfans',
+        creator_type: creatorType,
         estimated_monthly_revenue: estimatedRevenue,
         referral_source: referralSource,
-        ip_address: ipAddress,
+        ip_address: ip,
         user_agent: userAgent,
+        email_confirmed: false
       })
       .select()
       .single()
 
-    if (error) {
-      // Handle duplicate email
-      if (error.code === '23505') {
-        return NextResponse.json(
-          { 
-            error: 'Email already registered', 
-            message: "You're already on our waitlist! We'll notify you when we launch." 
-          }, 
-          { status: 409 }
-        )
-      }
-      
-      console.error('Supabase error:', error)
+    if (insertError) {
+      console.error('Supabase insert error:', insertError)
       return NextResponse.json(
-        { error: 'Failed to join waitlist' }, 
+        { error: 'Something went wrong. Please try again.' },
         { status: 500 }
       )
     }
 
-    // Generate confirmation token (optional)
-    const { data: tokenData } = await supabase.rpc('generate_confirmation_token', {
-      user_email: email.toLowerCase().trim()
-    })
-
-    // TODO: Send welcome email with confirmation link
-    // await sendWelcomeEmail(email, tokenData)
-
-    // Get current waitlist size for social proof
+    // Get waitlist position for social proof
     const { count } = await supabase
       .from('waitlist_signups')
       .select('*', { count: 'exact', head: true })
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Successfully joined the waitlist!',
-      waitlistPosition: count,
-      confirmationToken: tokenData // Remove this in production
+    // Generate confirmation token (optional feature)
+    const confirmationToken = crypto.randomUUID()
+    await supabaseAdmin
+      .from('email_confirmation_tokens')
+      .insert({
+        email: email.toLowerCase(),
+        token: confirmationToken,
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
+      })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Welcome to the waitlist! We\'ll notify you when ProfitLens is ready.',
+      waitlistPosition: count || 1,
+      confirmationToken // Include if you want to send confirmation emails
     })
 
   } catch (error) {
-    console.error('Waitlist signup error:', error)
+    console.error('Waitlist API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' }, 
+      { error: 'Something went wrong. Please try again.' },
       { status: 500 }
     )
   }
 }
 
+// GET /api/waitlist - Get waitlist stats (for admin)
 export async function GET(request: NextRequest) {
   try {
-    const url = new URL(request.url)
-    const token = url.searchParams.get('confirm')
-    
-    if (token) {
-      // Handle email confirmation
-      const { data: confirmed } = await supabase.rpc('confirm_waitlist_email', {
-        confirmation_token: token
-      })
-      
-      if (confirmed) {
-        return NextResponse.redirect(new URL('/waitlist/confirmed', request.url))
-      } else {
-        return NextResponse.redirect(new URL('/waitlist/invalid', request.url))
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: 'Database is not configured. Please check your environment variables.' },
+        { status: 500 }
+      )
+    }
+    const { searchParams } = new URL(request.url)
+    const token = searchParams.get('token')
+    const action = searchParams.get('action')
+
+    // Handle email confirmation
+    if (action === 'confirm' && token) {
+      const { data: tokenData } = await supabaseAdmin
+        .from('email_confirmation_tokens')
+        .select('email, expires_at')
+        .eq('token', token)
+        .single()
+
+      if (!tokenData) {
+        return NextResponse.redirect('/waitlist/invalid')
       }
+
+      if (new Date(tokenData.expires_at) < new Date()) {
+        return NextResponse.redirect('/waitlist/invalid')
+      }
+
+      // Confirm email
+      await supabaseAdmin
+        .from('waitlist_signups')
+        .update({ email_confirmed: true })
+        .eq('email', tokenData.email)
+
+      // Delete used token
+      await supabaseAdmin
+        .from('email_confirmation_tokens')
+        .delete()
+        .eq('token', token)
+
+      return NextResponse.redirect('/waitlist/confirmed')
     }
 
-    // Get waitlist stats (admin only)
-    const { data: stats, error } = await supabase.rpc('get_waitlist_stats')
-    
-    if (error) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    // Get waitlist stats (requires admin authentication in production)
+    const { data: signups, count } = await supabaseAdmin
+      .from('waitlist_signups')
+      .select('*', { count: 'exact' })
 
-    return NextResponse.json(stats[0])
-    
+    const confirmedCount = signups?.filter(s => s.email_confirmed).length || 0
+    const recentCount = signups?.filter(s => 
+      new Date(s.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    ).length || 0
+
+    // Top referral sources
+    const referralSources = signups?.reduce((acc: any, signup) => {
+      const source = signup.referral_source || 'direct'
+      acc[source] = (acc[source] || 0) + 1
+      return acc
+    }, {})
+
+    const topReferralSources = Object.entries(referralSources || {})
+      .map(([source, count]) => ({ source, count }))
+      .sort((a: any, b: any) => b.count - a.count)
+      .slice(0, 5)
+
+    return NextResponse.json({
+      totalSignups: count || 0,
+      confirmedSignups: confirmedCount,
+      recentSignups: recentCount,
+      topReferralSources
+    })
+
   } catch (error) {
     console.error('Waitlist GET error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' }, 
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

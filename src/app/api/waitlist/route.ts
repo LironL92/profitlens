@@ -1,39 +1,126 @@
-import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 
-export async function POST(request: Request) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role for server operations
+)
+
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, source = 'organic', referrer = null } = body;
-
+    const { email, source = 'landing_page', referralSource, estimatedRevenue } = await request.json()
+    
     // Validate email
     if (!email || !email.includes('@')) {
       return NextResponse.json(
-        { error: 'Valid email required' },
+        { error: 'Valid email is required' }, 
         { status: 400 }
-      );
+      )
     }
 
-    // For now, we'll just log the waitlist signup
-    // In a real app, you'd save this to a database
-    console.log('Waitlist signup:', {
-      email: email.toLowerCase().trim(),
-      source,
-      referrer,
-      timestamp: new Date().toISOString()
-    });
+    // Get request metadata
+    const headersList = headers()
+    const userAgent = headersList.get('user-agent')
+    const forwardedFor = headersList.get('x-forwarded-for')
+    const realIp = headersList.get('x-real-ip')
+    const ipAddress = forwardedFor?.split(',')[0] || realIp || null
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: 'Successfully joined waitlist'
-      },
-      { status: 200 }
-    );
+    // Insert into waitlist
+    const { error } = await supabase
+      .from('waitlist_signups')
+      .insert({
+        email: email.toLowerCase().trim(),
+        source,
+        creator_type: 'onlyfans',
+        estimated_monthly_revenue: estimatedRevenue,
+        referral_source: referralSource,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      // Handle duplicate email
+      if (error.code === '23505') {
+        return NextResponse.json(
+          { 
+            error: 'Email already registered', 
+            message: 'You\'re already on our waitlist! We\'ll notify you when we launch.' 
+          }, 
+          { status: 409 }
+        )
+      }
+      
+      console.error('Supabase error:', error)
+      return NextResponse.json(
+        { error: 'Failed to join waitlist' }, 
+        { status: 500 }
+      )
+    }
+
+    // Generate confirmation token (optional)
+    const { data: tokenData } = await supabase.rpc('generate_confirmation_token', {
+      user_email: email.toLowerCase().trim()
+    })
+
+    // TODO: Send welcome email with confirmation link
+    // await sendWelcomeEmail(email, tokenData)
+
+    // Get current waitlist size for social proof
+    const { count } = await supabase
+      .from('waitlist_signups')
+      .select('*', { count: 'exact', head: true })
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Successfully joined the waitlist!',
+      waitlistPosition: count,
+      confirmationToken: tokenData // Remove this in production
+    })
+
   } catch (error) {
-    console.error('API route error:', error);
+    console.error('Waitlist signup error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error' }, 
       { status: 500 }
-    );
+    )
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const url = new URL(request.url)
+    const token = url.searchParams.get('confirm')
+    
+    if (token) {
+      // Handle email confirmation
+      const { data: confirmed } = await supabase.rpc('confirm_waitlist_email', {
+        confirmation_token: token
+      })
+      
+      if (confirmed) {
+        return NextResponse.redirect(new URL('/waitlist/confirmed', request.url))
+      } else {
+        return NextResponse.redirect(new URL('/waitlist/invalid', request.url))
+      }
+    }
+
+    // Get waitlist stats (admin only)
+    const { data: stats, error } = await supabase.rpc('get_waitlist_stats')
+    
+    if (error) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    return NextResponse.json(stats[0])
+    
+  } catch (error) {
+    console.error('Waitlist GET error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    )
   }
 }

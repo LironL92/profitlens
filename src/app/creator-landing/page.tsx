@@ -1,17 +1,26 @@
 'use client'
 
-import { ArrowRight, Calculator, TrendingUp, Clock } from 'lucide-react'
+import { ArrowRight, Calculator, TrendingUp, Clock, Loader2 } from 'lucide-react'
 import { useState } from 'react'
-import Link from 'next/link'
+
+// TypeScript declaration for gtag
+declare global {
+  interface Window {
+    gtag: (command: string, action: string, params: Record<string, unknown>) => void
+  }
+}
 
 export default function OnlyFansCreatorLandingPage() {
   const [email, setEmail] = useState('')
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [waitlistPosition, setWaitlistPosition] = useState(null)
 
   const handleWaitlistSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLoading) return
+
     setIsLoading(true)
     setError('')
 
@@ -23,25 +32,102 @@ export default function OnlyFansCreatorLandingPage() {
         },
         body: JSON.stringify({
           email,
-          source: 'onlyfans-creator-landing',
-          referrer: 'creator-landing-page'
+          source: 'landing_page',
+          referralSource: document.referrer || 'direct',
         }),
       })
 
       const data = await response.json()
 
-      if (response.ok) {
-        setIsSubmitted(true)
-        setEmail('')
-      } else {
-        setError(data.error || 'Failed to join waitlist. Please try again.')
+      if (!response.ok) {
+        if (response.status === 409) {
+          // Email already exists
+          setError(data.message)
+        } else {
+          setError(data.error || 'Something went wrong. Please try again.')
+        }
+        return
       }
-    } catch {
+
+      setIsSubmitted(true)
+      setWaitlistPosition(data.waitlistPosition)
+      
+      // Track successful signup (analytics)
+      if (typeof window !== 'undefined' && window.gtag) {
+        window.gtag('event', 'waitlist_signup', {
+          event_category: 'engagement',
+          event_label: 'onlyfans_creator_landing'
+        })
+      }
+
+    } catch (err) {
       setError('Network error. Please check your connection and try again.')
+      console.error('Waitlist signup error:', err)
     } finally {
       setIsLoading(false)
     }
   }
+
+  const WaitlistForm = () => (
+    <div className="max-w-md mx-auto mb-12">
+      {!isSubmitted ? (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none disabled:bg-gray-50"
+              required
+              disabled={isLoading}
+            />
+            <button
+              onClick={handleWaitlistSubmit}
+              disabled={isLoading || !email}
+              className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                  Joining...
+                </>
+              ) : (
+                <>
+                  Join Waitlist
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </button>
+          </div>
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="text-red-800 text-sm">{error}</div>
+            </div>
+          )}
+          
+          <p className="text-sm text-gray-500 text-center">
+            Free for the first 100 creators • No spam, ever
+          </p>
+        </div>
+      ) : (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+          <div className="text-green-800 font-semibold text-lg mb-2">
+            ✅ You're on the list!
+          </div>
+          <div className="text-green-600 mb-2">
+            We'll notify you when ProfitLens launches for creators.
+          </div>
+          {waitlistPosition && (
+            <div className="text-green-700 text-sm font-medium">
+              You're #{waitlistPosition} on the waitlist
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
@@ -53,16 +139,8 @@ export default function OnlyFansCreatorLandingPage() {
               <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full" />
               <span className="ml-2 text-xl font-semibold text-gray-900">ProfitLens</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/"
-                className="text-gray-600 hover:text-gray-900 font-medium text-sm"
-              >
-                ← Main Site
-              </Link>
-              <div className="text-sm text-gray-600 font-medium">
-                For OnlyFans Creators
-              </div>
+            <div className="text-sm text-gray-600 font-medium">
+              For OnlyFans Creators
             </div>
           </div>
         </div>
@@ -87,47 +165,7 @@ export default function OnlyFansCreatorLandingPage() {
             optimize your taxes, and focus on what you do best — creating content.
           </p>
 
-          {/* Waitlist Form */}
-          <div className="max-w-md mx-auto mb-12">
-            {!isSubmitted ? (
-              <form onSubmit={handleWaitlistSubmit}>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    required
-                    disabled={isLoading}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none disabled:opacity-50"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoading || !email}
-                    className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? 'Joining...' : 'Join Waitlist'}
-                    {!isLoading && <ArrowRight className="ml-2 h-5 w-5" />}
-                  </button>
-                </div>
-                {error && (
-                  <div className="mt-3 text-red-600 text-sm text-center">
-                    {error}
-                  </div>
-                )}
-              </form>
-            ) : (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="text-green-800 font-semibold">✅ You&apos;re on the list!</div>
-                <div className="text-green-600 text-sm mt-1">
-                  We&apos;ll notify you when ProfitLens launches for creators.
-                </div>
-              </div>
-            )}
-            <p className="text-sm text-gray-500 mt-2">
-              Free for the first 100 creators • No spam, ever
-            </p>
-          </div>
+          <WaitlistForm />
         </div>
 
         {/* Problem Section */}
@@ -310,39 +348,7 @@ export default function OnlyFansCreatorLandingPage() {
             Join the waitlist and be the first to know when ProfitLens launches.
           </p>
           
-          {!isSubmitted && (
-            <div className="max-w-md mx-auto">
-              <form onSubmit={handleWaitlistSubmit}>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    required
-                    disabled={isLoading}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none disabled:opacity-50"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoading || !email}
-                    className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isLoading ? 'Joining...' : 'Join Waitlist'}
-                    {!isLoading && <ArrowRight className="ml-2 h-5 w-5" />}
-                  </button>
-                </div>
-                {error && (
-                  <div className="mt-3 text-red-600 text-sm text-center">
-                    {error}
-                  </div>
-                )}
-              </form>
-              <p className="text-sm text-gray-500 mt-2">
-                Free for the first 100 creators • Launch expected Q4 2024
-              </p>
-            </div>
-          )}
+          <WaitlistForm />
         </div>
       </main>
 

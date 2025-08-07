@@ -1,0 +1,410 @@
+[1mdiff --git a/src/app/api/waitlist/route.ts b/src/app/api/waitlist/route.ts[m
+[1mindex 6649dcf..2964172 100644[m
+[1m--- a/src/app/api/waitlist/route.ts[m
+[1m+++ b/src/app/api/waitlist/route.ts[m
+[36m@@ -1,39 +1,126 @@[m
+[31m-import { NextResponse } from 'next/server';[m
+[32m+[m[32mimport { createClient } from '@supabase/supabase-js'[m
+[32m+[m[32mimport { NextRequest, NextResponse } from 'next/server'[m
+[32m+[m[32mimport { headers } from 'next/headers'[m
+ [m
+[31m-export async function POST(request: Request) {[m
+[31m-  try {[m
+[31m-    const body = await request.json();[m
+[31m-    const { email, source = 'organic', referrer = null } = body;[m
+[32m+[m[32mconst supabase = createClient([m
+[32m+[m[32m  process.env.NEXT_PUBLIC_SUPABASE_URL!,[m
+[32m+[m[32m  process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role for server operations[m
+[32m+[m[32m)[m
+ [m
+[32m+[m[32mexport async function POST(request: NextRequest) {[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    const { email, source = 'landing_page', referralSource, estimatedRevenue } = await request.json()[m
+[32m+[m[41m    [m
+     // Validate email[m
+     if (!email || !email.includes('@')) {[m
+       return NextResponse.json([m
+[31m-        { error: 'Valid email required' },[m
+[32m+[m[32m        { error: 'Valid email is required' },[m[41m [m
+         { status: 400 }[m
+[31m-      );[m
+[32m+[m[32m      )[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Get request metadata[m
+[32m+[m[32m    const headersList = headers()[m
+[32m+[m[32m    const userAgent = headersList.get('user-agent')[m
+[32m+[m[32m    const forwardedFor = headersList.get('x-forwarded-for')[m
+[32m+[m[32m    const realIp = headersList.get('x-real-ip')[m
+[32m+[m[32m    const ipAddress = forwardedFor?.split(',')[0] || realIp || null[m
+[32m+[m
+[32m+[m[32m    // Insert into waitlist[m
+[32m+[m[32m    const { error } = await supabase[m
+[32m+[m[32m      .from('waitlist_signups')[m
+[32m+[m[32m      .insert({[m
+[32m+[m[32m        email: email.toLowerCase().trim(),[m
+[32m+[m[32m        source,[m
+[32m+[m[32m        creator_type: 'onlyfans',[m
+[32m+[m[32m        estimated_monthly_revenue: estimatedRevenue,[m
+[32m+[m[32m        referral_source: referralSource,[m
+[32m+[m[32m        ip_address: ipAddress,[m
+[32m+[m[32m        user_agent: userAgent,[m
+[32m+[m[32m      })[m
+[32m+[m[32m      .select()[m
+[32m+[m[32m      .single()[m
+[32m+[m
+[32m+[m[32m    if (error) {[m
+[32m+[m[32m      // Handle duplicate email[m
+[32m+[m[32m      if (error.code === '23505') {[m
+[32m+[m[32m        return NextResponse.json([m
+[32m+[m[32m          {[m[41m [m
+[32m+[m[32m            error: 'Email already registered',[m[41m [m
+[32m+[m[32m            message: 'You\'re already on our waitlist! We\'ll notify you when we launch.'[m[41m [m
+[32m+[m[32m          },[m[41m [m
+[32m+[m[32m          { status: 409 }[m
+[32m+[m[32m        )[m
+[32m+[m[32m      }[m
+[32m+[m[41m      [m
+[32m+[m[32m      console.error('Supabase error:', error)[m
+[32m+[m[32m      return NextResponse.json([m
+[32m+[m[32m        { error: 'Failed to join waitlist' },[m[41m [m
+[32m+[m[32m        { status: 500 }[m
+[32m+[m[32m      )[m
+     }[m
+ [m
+[31m-    // For now, we'll just log the waitlist signup[m
+[31m-    // In a real app, you'd save this to a database[m
+[31m-    console.log('Waitlist signup:', {[m
+[31m-      email: email.toLowerCase().trim(),[m
+[31m-      source,[m
+[31m-      referrer,[m
+[31m-      timestamp: new Date().toISOString()[m
+[31m-    });[m
+[32m+[m[32m    // Generate confirmation token (optional)[m
+[32m+[m[32m    const { data: tokenData } = await supabase.rpc('generate_confirmation_token', {[m
+[32m+[m[32m      user_email: email.toLowerCase().trim()[m
+[32m+[m[32m    })[m
+[32m+[m
+[32m+[m[32m    // TODO: Send welcome email with confirmation link[m
+[32m+[m[32m    // await sendWelcomeEmail(email, tokenData)[m
+[32m+[m
+[32m+[m[32m    // Get current waitlist size for social proof[m
+[32m+[m[32m    const { count } = await supabase[m
+[32m+[m[32m      .from('waitlist_signups')[m
+[32m+[m[32m      .select('*', { count: 'exact', head: true })[m
+[32m+[m
+[32m+[m[32m    return NextResponse.json({[m[41m [m
+[32m+[m[32m      success: true,[m[41m [m
+[32m+[m[32m      message: 'Successfully joined the waitlist!',[m
+[32m+[m[32m      waitlistPosition: count,[m
+[32m+[m[32m      confirmationToken: tokenData // Remove this in production[m
+[32m+[m[32m    })[m
+ [m
+[32m+[m[32m  } catch (error) {[m
+[32m+[m[32m    console.error('Waitlist signup error:', error)[m
+     return NextResponse.json([m
+[31m-      { [m
+[31m-        success: true, [m
+[31m-        message: 'Successfully joined waitlist'[m
+[31m-      },[m
+[31m-      { status: 200 }[m
+[31m-    );[m
+[32m+[m[32m      { error: 'Internal server error' },[m[41m [m
+[32m+[m[32m      { status: 500 }[m
+[32m+[m[32m    )[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport async function GET(request: NextRequest) {[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    const url = new URL(request.url)[m
+[32m+[m[32m    const token = url.searchParams.get('confirm')[m
+[32m+[m[41m    [m
+[32m+[m[32m    if (token) {[m
+[32m+[m[32m      // Handle email confirmation[m
+[32m+[m[32m      const { data: confirmed } = await supabase.rpc('confirm_waitlist_email', {[m
+[32m+[m[32m        confirmation_token: token[m
+[32m+[m[32m      })[m
+[32m+[m[41m      [m
+[32m+[m[32m      if (confirmed) {[m
+[32m+[m[32m        return NextResponse.redirect(new URL('/waitlist/confirmed', request.url))[m
+[32m+[m[32m      } else {[m
+[32m+[m[32m        return NextResponse.redirect(new URL('/waitlist/invalid', request.url))[m
+[32m+[m[32m      }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Get waitlist stats (admin only)[m
+[32m+[m[32m    const { data: stats, error } = await supabase.rpc('get_waitlist_stats')[m
+[32m+[m[41m    [m
+[32m+[m[32m    if (error) {[m
+[32m+[m[32m      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    return NextResponse.json(stats[0])[m
+[32m+[m[41m    [m
+   } catch (error) {[m
+[31m-    console.error('API route error:', error);[m
+[32m+[m[32m    console.error('Waitlist GET error:', error)[m
+     return NextResponse.json([m
+[31m-      { error: 'Internal server error' },[m
+[32m+[m[32m      { error: 'Internal server error' },[m[41m [m
+       { status: 500 }[m
+[31m-    );[m
+[32m+[m[32m    )[m
+   }[m
+ }[m
+\ No newline at end of file[m
+[1mdiff --git a/src/app/creator-landing/page.tsx b/src/app/creator-landing/page.tsx[m
+[1mindex 696246b..867ed30 100644[m
+[1m--- a/src/app/creator-landing/page.tsx[m
+[1m+++ b/src/app/creator-landing/page.tsx[m
+[36m@@ -1,17 +1,26 @@[m
+ 'use client'[m
+ [m
+[31m-import { ArrowRight, Calculator, TrendingUp, Clock } from 'lucide-react'[m
+[32m+[m[32mimport { ArrowRight, Calculator, TrendingUp, Clock, Loader2 } from 'lucide-react'[m
+ import { useState } from 'react'[m
+[31m-import Link from 'next/link'[m
+[32m+[m
+[32m+[m[32m// TypeScript declaration for gtag[m
+[32m+[m[32mdeclare global {[m
+[32m+[m[32m  interface Window {[m
+[32m+[m[32m    gtag: (command: string, action: string, params: Record<string, unknown>) => void[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+ [m
+ export default function OnlyFansCreatorLandingPage() {[m
+   const [email, setEmail] = useState('')[m
+   const [isSubmitted, setIsSubmitted] = useState(false)[m
+   const [isLoading, setIsLoading] = useState(false)[m
+   const [error, setError] = useState('')[m
+[32m+[m[32m  const [waitlistPosition, setWaitlistPosition] = useState(null)[m
+ [m
+   const handleWaitlistSubmit = async (e: React.FormEvent) => {[m
+     e.preventDefault()[m
+[32m+[m[32m    if (isLoading) return[m
+[32m+[m
+     setIsLoading(true)[m
+     setError('')[m
+ [m
+[36m@@ -23,26 +32,103 @@[m [mexport default function OnlyFansCreatorLandingPage() {[m
+         },[m
+         body: JSON.stringify({[m
+           email,[m
+[31m-          source: 'onlyfans-creator-landing',[m
+[31m-          referrer: 'creator-landing-page'[m
+[32m+[m[32m          source: 'landing_page',[m
+[32m+[m[32m          referralSource: document.referrer || 'direct',[m
+         }),[m
+       })[m
+ [m
+       const data = await response.json()[m
+ [m
+[31m-      if (response.ok) {[m
+[31m-        setIsSubmitted(true)[m
+[31m-        setEmail('')[m
+[31m-      } else {[m
+[31m-        setError(data.error || 'Failed to join waitlist. Please try again.')[m
+[32m+[m[32m      if (!response.ok) {[m
+[32m+[m[32m        if (response.status === 409) {[m
+[32m+[m[32m          // Email already exists[m
+[32m+[m[32m          setError(data.message)[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m          setError(data.error || 'Something went wrong. Please try again.')[m
+[32m+[m[32m        }[m
+[32m+[m[32m        return[m
+[32m+[m[32m      }[m
+[32m+[m
+[32m+[m[32m      setIsSubmitted(true)[m
+[32m+[m[32m      setWaitlistPosition(data.waitlistPosition)[m
+[32m+[m[41m      [m
+[32m+[m[32m      // Track successful signup (analytics)[m
+[32m+[m[32m      if (typeof window !== 'undefined' && window.gtag) {[m
+[32m+[m[32m        window.gtag('event', 'waitlist_signup', {[m
+[32m+[m[32m          event_category: 'engagement',[m
+[32m+[m[32m          event_label: 'onlyfans_creator_landing'[m
+[32m+[m[32m        })[m
+       }[m
+[31m-    } catch {[m
+[32m+[m
+[32m+[m[32m    } catch (err) {[m
+       setError('Network error. Please check your connection and try again.')[m
+[32m+[m[32m      console.error('Waitlist signup error:', err)[m
+     } finally {[m
+       setIsLoading(false)[m
+     }[m
+   }[m
+ [m
+[32m+[m[32m  const WaitlistForm = () => ([m
+[32m+[m[32m    <div className="max-w-md mx-auto mb-12">[m
+[32m+[m[32m      {!isSubmitted ? ([m
+[32m+[m[32m        <div className="space-y-4">[m
+[32m+[m[32m          <div className="flex flex-col sm:flex-row gap-3">[m
+[32m+[m[32m            <input[m
+[32m+[m[32m              type="email"[m
+[32m+[m[32m              value={email}[m
+[32m+[m[32m              onChange={(e) => setEmail(e.target.value)}[m
+[32m+[m[32m              placeholder="Enter your email"[m
+[32m+[m[32m              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none disabled:bg-gray-50"[m
+[32m+[m[32m              required[m
+[32m+[m[32m              disabled={isLoading}[m
+[32m+[m[32m            />[m
+[32m+[m[32m            <button[m
+[32m+[m[32m              onClick={handleWaitlistSubmit}[m
+[32m+[m[32m              disabled={isLoading || !email}[m
+[32m+[m[32m              className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"[m
+[32m+[m[32m            >[m
+[32m+[m[32m              {isLoading ? ([m
+[32m+[m[32m                <>[m
+[32m+[m[32m                  <Loader2 className="animate-spin h-5 w-5 mr-2" />[m
+[32m+[m[32m                  Joining...[m
+[32m+[m[32m                </>[m
+[32m+[m[32m              ) : ([m
+[32m+[m[32m                <>[m
+[32m+[m[32m                  Join Waitlist[m
+[32m+[m[32m                  <ArrowRight className="ml-2 h-5 w-5" />[m
+[32m+[m[32m                </>[m
+[32m+[m[32m              )}[m
+[32m+[m[32m            </button>[m
+[32m+[m[32m          </div>[m
+[32m+[m[41m          [m
+[32m+[m[32m          {error && ([m
+[32m+[m[32m            <div className="bg-red-50 border border-red-200 rounded-lg p-3">[m
+[32m+[m[32m              <div className="text-red-800 text-sm">{error}</div>[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          )}[m
+[32m+[m[41m          [m
+[32m+[m[32m          <p className="text-sm text-gray-500 text-center">[m
+[32m+[m[32m            Free for the first 100 creators • No spam, ever[m
+[32m+[m[32m          </p>[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      ) : ([m
+[32m+[m[32m        <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">[m
+[32m+[m[32m          <div className="text-green-800 font-semibold text-lg mb-2">[m
+[32m+[m[32m            ✅ You're on the list![m
+[32m+[m[32m          </div>[m
+[32m+[m[32m          <div className="text-green-600 mb-2">[m
+[32m+[m[32m            We'll notify you when ProfitLens launches for creators.[m
+[32m+[m[32m          </div>[m
+[32m+[m[32m          {waitlistPosition && ([m
+[32m+[m[32m            <div className="text-green-700 text-sm font-medium">[m
+[32m+[m[32m              You're #{waitlistPosition} on the waitlist[m
+[32m+[m[32m            </div>[m
+[32m+[m[32m          )}[m
+[32m+[m[32m        </div>[m
+[32m+[m[32m      )}[m
+[32m+[m[32m    </div>[m
+[32m+[m[32m  )[m
+[32m+[m
+   return ([m
+     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">[m
+       {/* Header */}[m
+[36m@@ -53,16 +139,8 @@[m [mexport default function OnlyFansCreatorLandingPage() {[m
+               <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full" />[m
+               <span className="ml-2 text-xl font-semibold text-gray-900">ProfitLens</span>[m
+             </div>[m
+[31m-            <div className="flex items-center space-x-4">[m
+[31m-              <Link[m
+[31m-                href="/"[m
+[31m-                className="text-gray-600 hover:text-gray-900 font-medium text-sm"[m
+[31m-              >[m
+[31m-                ← Main Site[m
+[31m-              </Link>[m
+[31m-              <div className="text-sm text-gray-600 font-medium">[m
+[31m-                For OnlyFans Creators[m
+[31m-              </div>[m
+[32m+[m[32m            <div className="text-sm text-gray-600 font-medium">[m
+[32m+[m[32m              For OnlyFans Creators[m
+             </div>[m
+           </div>[m
+         </div>[m
+[36m@@ -87,47 +165,7 @@[m [mexport default function OnlyFansCreatorLandingPage() {[m
+             optimize your taxes, and focus on what you do best — creating content.[m
+           </p>[m
+ [m
+[31m-          {/* Waitlist Form */}[m
+[31m-          <div className="max-w-md mx-auto mb-12">[m
+[31m-            {!isSubmitted ? ([m
+[31m-              <form onSubmit={handleWaitlistSubmit}>[m
+[31m-                <div className="flex flex-col sm:flex-row gap-3">[m
+[31m-                  <input[m
+[31m-                    type="email"[m
+[31m-                    value={email}[m
+[31m-                    onChange={(e) => setEmail(e.target.value)}[m
+[31m-                    placeholder="Enter your email"[m
+[31m-                    required[m
+[31m-                    disabled={isLoading}[m
+[31m-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none disabled:opacity-50"[m
+[31m-                  />[m
+[31m-                  <button[m
+[31m-                    type="submit"[m
+[31m-                    disabled={isLoading || !email}[m
+[31m-                    className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"[m
+[31m-                  >[m
+[31m-                    {isLoading ? 'Joining...' : 'Join Waitlist'}[m
+[31m-                    {!isLoading && <ArrowRight className="ml-2 h-5 w-5" />}[m
+[31m-                  </button>[m
+[31m-                </div>[m
+[31m-                {error && ([m
+[31m-                  <div className="mt-3 text-red-600 text-sm text-center">[m
+[31m-                    {error}[m
+[31m-                  </div>[m
+[31m-                )}[m
+[31m-              </form>[m
+[31m-            ) : ([m
+[31m-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">[m
+[31m-                <div className="text-green-800 font-semibold">✅ You&apos;re on the list!</div>[m
+[31m-                <div className="text-green-600 text-sm mt-1">[m
+[31m-                  We&apos;ll notify you when ProfitLens launches for creators.[m
+[31m-                </div>[m
+[31m-              </div>[m
+[31m-            )}[m
+[31m-            <p className="text-sm text-gray-500 mt-2">[m
+[31m-              Free for the first 100 creators • No spam, ever[m
+[31m-            </p>[m
+[31m-          </div>[m
+[32m+[m[32m          <WaitlistForm />[m
+         </div>[m
+ [m
+         {/* Problem Section */}[m
+[36m@@ -310,39 +348,7 @@[m [mexport default function OnlyFansCreatorLandingPage() {[m
+             Join the waitlist and be the first to know when ProfitLens launches.[m
+           </p>[m
+           [m
+[31m-          {!isSubmitted && ([m
+[31m-            <div className="max-w-md mx-auto">[m
+[31m-              <form onSubmit={handleWaitlistSubmit}>[m
+[31m-                <div className="flex flex-col sm:flex-row gap-3">[m
+[31m-                  <input[m
+[31m-                    type="email"[m
+[31m-                    value={email}[m
+[31m-                    onChange={(e) => setEmail(e.target.value)}[m
+[31m-                    placeholder="Enter your email"[m
+[31m-                    required[m
+[31m-                    disabled={isLoading}[m
+[31m-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none disabled:opacity-50"[m
+[31m-                  />[m
+[31m-                  <button[m
+[31m-                    type="submit"[m
+[31m-                    disabled={isLoading || !email}[m
+[31m-                    className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed"[m
+[31m-                  >[m
+[31m-                    {isLoading ? 'Joining...' : 'Join Waitlist'}[m
+[31m-                    {!isLoading && <ArrowRight className="ml-2 h-5 w-5" />}[m
+[31m-                  </button>[m
+[31m-                </div>[m
+[31m-                {error && ([m
+[31m-                  <div className="mt-3 text-red-600 text-sm text-center">[m
+[31m-                    {error}[m
+[31m-                  </div>[m
+[31m-                )}[m
+[31m-              </form>[m
+[31m-              <p className="text-sm text-gray-500 mt-2">[m
+[31m-                Free for the first 100 creators • Launch expected Q4 2024[m
+[31m-              </p>[m
+[31m-            </div>[m
+[31m-          )}[m
+[32m+[m[32m          <WaitlistForm />[m
+         </div>[m
+       </main>[m
+ [m

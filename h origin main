@@ -1,0 +1,2 @@
+[33mcccfc8b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix Resend initialization to handle missing API key during build
+[33m83b8013[m[33m ([m[1;31morigin/main[m[33m)[m Add test email API endpoint for email functionality testing

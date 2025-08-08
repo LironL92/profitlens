@@ -28,9 +28,6 @@ export async function POST(request: NextRequest) {
     const { 
       email, 
       source = 'landing_page', 
-      creatorType = 'onlyfans', 
-      estimatedRevenue, 
-      referralSource,
       utmSource,
       utmMedium,
       utmCampaign
@@ -82,19 +79,16 @@ export async function POST(request: NextRequest) {
     const headersList = await headers()
     const referer = headersList.get('referer') || 'direct'
 
-    // Insert new signup with enhanced data
+    // Insert new signup with data that matches the actual table schema
     const { data: newSignup, error: insertError } = await supabase
       .from('waitlist')
       .insert({
         email: email.toLowerCase(),
         source: source,
-        referrer: referer,
-        utm_source: utmSource || null,
-        utm_medium: utmMedium || null,
-        utm_campaign: utmCampaign || null,
-        creator_type: creatorType,
-        estimated_revenue: estimatedRevenue,
-        referral_source: referralSource
+        referrer: referer || '-',
+        utm_source: utmSource || '-',
+        utm_medium: utmMedium || '-',
+        utm_campaign: utmCampaign || '-'
       })
       .select()
       .single()

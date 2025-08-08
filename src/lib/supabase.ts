@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gcqxuhjzczpztadfrqdz.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjcXh1aGp6Y3pwenRhZGZycWR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NDkwNjQsImV4cCI6MjA3MDIyNTA2NH0.OhaZygdRS_v0wIoQKgVHWXCw1K7QM6RrVoGi8NVhIvg'
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdjcXh1aGp6Y3pwenRhZGZycWR6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDY0OTA2NCwiZXhwIjoyMDcwMjI1MDY0fQ.rtn0veCBJrbsctrLReRmCNxf_GINBiFBYkxGyoLFl9E'
 
 // Check for missing environment variables at runtime, not build time
 function checkEnvironmentVariables() {
@@ -14,12 +14,12 @@ function checkEnvironmentVariables() {
 }
 
 // Client for browser/public operations
-export const supabase = createClient(supabaseUrl!, supabaseAnonKey!)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Server client with service role key for admin operations
 export const supabaseAdmin = createClient(
-  supabaseUrl!,
-  serviceRoleKey!,
+  supabaseUrl,
+  serviceRoleKey,
   {
     auth: {
       autoRefreshToken: false,

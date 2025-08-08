@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase'
 import { headers } from 'next/headers'
+import { Resend } from 'resend'
+import WelcomeEmail from '../../../../emails/welcome-email'
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -73,12 +78,23 @@ export async function POST(request: NextRequest) {
 
     console.log('💾 Inserting new signup...')
 
-    // Insert new signup with minimal data first
+    // Get headers for tracking
+    const headersList = await headers()
+    const referer = headersList.get('referer') || 'direct'
+
+    // Insert new signup with enhanced data
     const { data: newSignup, error: insertError } = await supabase
       .from('waitlist')
       .insert({
         email: email.toLowerCase(),
-        source: 'landing_page'
+        source: source,
+        referrer: referer,
+        utm_source: utmSource || null,
+        utm_medium: utmMedium || null,
+        utm_campaign: utmCampaign || null,
+        creator_type: creatorType,
+        estimated_revenue: estimatedRevenue,
+        referral_source: referralSource
       })
       .select()
       .single()
@@ -112,6 +128,23 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Successfully added to waitlist:', newSignup.id)
+
+    // Send welcome email (non-blocking)
+    if (process.env.RESEND_API_KEY) {
+      resend.emails.send({
+        from: 'ProfitLens <hello@profitlens.co>',
+        to: email,
+        subject: "You're in! Welcome to ProfitLens 🎉",
+        react: WelcomeEmail({ email }),
+      }).then(() => {
+        console.log('✅ Welcome email sent to:', email)
+      }).catch((error) => {
+        console.error('❌ Failed to send welcome email:', error)
+        // Don't fail the signup if email fails
+      })
+    } else {
+      console.log('⚠️ RESEND_API_KEY not configured, skipping email')
+    }
 
     // Get waitlist position for social proof
     const { count } = await supabase

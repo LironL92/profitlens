@@ -52,6 +52,11 @@ export default function WaitlistAnalytics() {
     return null
   }
 
+  // Calculate percentage safely
+  const confirmationPercentage = stats.totalSignups > 0 
+    ? Math.round((stats.confirmedSignups / stats.totalSignups) * 100) 
+    : 0
+
   return (
     <div className="space-y-8">
       {/* Stats Grid */}
@@ -61,7 +66,7 @@ export default function WaitlistAnalytics() {
             <Users className="h-6 w-6 text-pink-500" />
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            {stats.totalSignups.toLocaleString()}+
+            {(stats.totalSignups || 0).toLocaleString()}+
           </div>
           <div className="text-sm text-gray-600">Creators on Waitlist</div>
         </div>
@@ -71,7 +76,7 @@ export default function WaitlistAnalytics() {
             <TrendingUp className="h-6 w-6 text-purple-500" />
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            {stats.recentSignups}+
+            {(stats.recentSignups || 0)}+
           </div>
           <div className="text-sm text-gray-600">Joined This Week</div>
         </div>
@@ -81,14 +86,14 @@ export default function WaitlistAnalytics() {
             <Clock className="h-6 w-6 text-indigo-500" />
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            {Math.round((stats.confirmedSignups / stats.totalSignups) * 100)}%
+            {confirmationPercentage}%
           </div>
           <div className="text-sm text-gray-600">Email Confirmed</div>
         </div>
       </div>
 
       {/* Top Referral Sources */}
-      {stats.topReferralSources.length > 0 && (
+      {stats.topReferralSources && stats.topReferralSources.length > 0 && (
         <div className="bg-white rounded-lg p-6 shadow-lg">
           <h3 className="text-lg font-semibold mb-4">Top Referral Sources</h3>
           <div className="space-y-3">

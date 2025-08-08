@@ -1,7 +1,7 @@
 -- Copy and paste this into your Supabase SQL Editor
 -- Go to: https://supabase.com/dashboard → Your Project → SQL Editor
 
--- Create waitlist_signups table
+-- Create waitlist_signups table with enhanced tracking
 CREATE TABLE waitlist_signups (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
@@ -12,7 +12,27 @@ CREATE TABLE waitlist_signups (
   referral_source VARCHAR(100),
   email_confirmed BOOLEAN DEFAULT FALSE,
   ip_address INET,
-  user_agent TEXT
+  user_agent TEXT,
+  -- Additional UTM tracking
+  utm_source VARCHAR(100),
+  utm_medium VARCHAR(100),
+  utm_campaign VARCHAR(100),
+  utm_term VARCHAR(100),
+  utm_content VARCHAR(100),
+  -- Device and browser info
+  device_type VARCHAR(50),
+  browser VARCHAR(100),
+  os VARCHAR(100),
+  -- Geographic data (if available)
+  country VARCHAR(100),
+  city VARCHAR(100),
+  -- Engagement tracking
+  signup_country VARCHAR(100),
+  time_on_page INTEGER, -- seconds
+  scroll_depth INTEGER, -- percentage
+  -- Notes for admin
+  notes TEXT,
+  admin_notes TEXT
 );
 
 -- Create email_confirmation_tokens table

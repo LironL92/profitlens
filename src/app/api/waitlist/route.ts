@@ -5,6 +5,29 @@ import { headers } from 'next/headers'
 // Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+// Rate limiting helper
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const windowMs = 15 * 60 * 1000 // 15 minutes
+  const maxRequests = 5 // 5 requests per 15 minutes
+
+  const record = rateLimitMap.get(ip)
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs })
+    return true
+  }
+
+  if (record.count >= maxRequests) {
+    return false
+  }
+
+  record.count++
+  return true
+}
+
 // POST /api/waitlist - Add email to waitlist
 export async function POST(request: NextRequest) {
   try {
@@ -15,8 +38,34 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Get request metadata
+    const headersList = await headers()
+    const ip = headersList.get('x-forwarded-for') || 
+               headersList.get('x-real-ip') || 
+               request.ip || 
+               'unknown'
+    const userAgent = headersList.get('user-agent') || 'unknown'
+
+    // Rate limiting
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
-    const { email, source = 'landing_page', creatorType = 'onlyfans', estimatedRevenue, referralSource } = body
+    const { 
+      email, 
+      source = 'landing_page', 
+      creatorType = 'onlyfans', 
+      estimatedRevenue, 
+      referralSource,
+      utmSource,
+      utmMedium,
+      utmCampaign
+    } = body
 
     // Validate email
     if (!email || !emailRegex.test(email)) {
@@ -26,15 +75,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get request metadata
-    const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'unknown'
-    const userAgent = headersList.get('user-agent') || 'unknown'
-
     // Check if email already exists
     const { data: existingSignup } = await supabase
       .from('waitlist_signups')
-      .select('email')
+      .select('email, created_at')
       .eq('email', email.toLowerCase())
       .single()
 
@@ -42,13 +86,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'You\'re already on the waitlist! We\'ll notify you when ProfitLens is ready.',
-          isAlreadySignedUp: true 
+          isAlreadySignedUp: true,
+          signedUpAt: existingSignup.created_at
         },
         { status: 409 }
       )
     }
 
-    // Insert new signup
+    // Insert new signup with enhanced tracking
     const { data: newSignup, error: insertError } = await supabase
       .from('waitlist_signups')
       .insert({
@@ -59,7 +104,11 @@ export async function POST(request: NextRequest) {
         referral_source: referralSource,
         ip_address: ip,
         user_agent: userAgent,
-        email_confirmed: false
+        email_confirmed: false,
+        // Additional UTM tracking
+        utm_source: utmSource,
+        utm_medium: utmMedium,
+        utm_campaign: utmCampaign
       })
       .select()
       .single()
@@ -77,7 +126,7 @@ export async function POST(request: NextRequest) {
       .from('waitlist_signups')
       .select('*', { count: 'exact', head: true })
 
-    // Generate confirmation token (optional feature)
+    // Generate confirmation token
     const confirmationToken = crypto.randomUUID()
     await supabaseAdmin
       .from('email_confirmation_tokens')
@@ -87,17 +136,21 @@ export async function POST(request: NextRequest) {
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       })
 
+    // Optional: Send welcome email via Supabase Edge Function
+    // This would require setting up an Edge Function for email sending
+
     return NextResponse.json({
       success: true,
-      message: 'Welcome to the waitlist! We\'ll notify you when ProfitLens is ready.',
+      message: '🎉 Welcome to the waitlist! Check your email for confirmation.',
       waitlistPosition: count || 1,
-      confirmationToken // Include if you want to send confirmation emails
+      confirmationToken,
+      estimatedLaunch: 'Q4 2025'
     })
 
   } catch (error) {
     console.error('Waitlist API error:', error)
     return NextResponse.json(
-      { error: 'Something went wrong. Please try again.' },
+      { error: 'Something went wrong. Please try again or email us at support@profitlens.co' },
       { status: 500 }
     )
   }

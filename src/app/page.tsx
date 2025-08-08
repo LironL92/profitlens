@@ -1,36 +1,10 @@
 'use client'
 
 import { ArrowRight, Calculator, TrendingUp, Clock } from 'lucide-react'
-import { useState } from 'react'
+import WaitlistForm from '@/components/WaitlistForm'
+import WaitlistAnalytics from '@/components/WaitlistAnalytics'
 
 export default function OnlyFansCreatorLandingPage() {
-  const [email, setEmail] = useState('')
-  const [isSubmitted, setIsSubmitted] = useState(false)
-
-  const handleWaitlistSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    try {
-      const response = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          source: 'landing_page',
-          creatorType: 'onlyfans'
-        }),
-      })
-
-      if (response.ok) {
-        setIsSubmitted(true)
-      }
-    } catch {
-      console.log('Waitlist signup:', email)
-      setIsSubmitted(true)
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
@@ -67,35 +41,8 @@ export default function OnlyFansCreatorLandingPage() {
           </p>
           
           {/* Waitlist Form */}
-          <div className="max-w-md mx-auto mb-12">
-            {!isSubmitted ? (
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none"
-                />
-                <button
-                  onClick={handleWaitlistSubmit}
-                  className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all"
-                >
-                  Join Waitlist
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </button>
-            </div>
-            ) : (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="text-green-800 font-semibold">✅ You&apos;re on the list!</div>
-                                <div className="text-green-600 text-sm mt-1">
-                  We&apos;ll notify you when ProfitLens launches for creators.
-            </div>
-            </div>
-            )}
-            <p className="text-sm text-gray-500 mt-2">
-              Free for the first 100 creators • No spam, ever
-            </p>
+          <div className="mb-12">
+            <WaitlistForm />
           </div>
         </div>
 
@@ -201,6 +148,12 @@ export default function OnlyFansCreatorLandingPage() {
             <h2 className="text-3xl font-bold mb-8">
               Join 500+ Creators Already on the Waitlist
             </h2>
+            
+            {/* Analytics Stats */}
+            <div className="mb-8">
+              <WaitlistAnalytics />
+            </div>
+            
             <div className="grid md:grid-cols-2 gap-8 text-left">
               <div className="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
                 <p className="text-lg italic mb-4">
@@ -274,29 +227,12 @@ export default function OnlyFansCreatorLandingPage() {
             Join the waitlist for financial tools that actually understand your business model.
           </p>
           
-          {!isSubmitted && (
-            <div className="max-w-md mx-auto">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 outline-none"
-                />
-                <button
-                  onClick={handleWaitlistSubmit}
-                  className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-pink-600 hover:to-purple-700 font-semibold inline-flex items-center justify-center transition-all"
-                >
-                  Join Waitlist
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </button>
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
-                Free for the first 100 creators • Launch expected Q4 2025
+          <div className="max-w-md mx-auto">
+            <WaitlistForm showSocialProof={false} />
+            <p className="text-sm text-gray-500 mt-2 text-center">
+              Free for the first 100 creators • Launch expected Q4 2025
             </p>
           </div>
-          )}
         </div>
       </main>
 

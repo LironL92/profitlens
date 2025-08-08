@@ -1,0 +1,3 @@
+[33m3636d9a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Production ready: Clean waitlist landing page with Supabase integration
+[33m8ac6f5a[m Fix TypeScript error: declare gtag as global function
+[33mde8806a[m Fix TypeScript error: remove request.ip property

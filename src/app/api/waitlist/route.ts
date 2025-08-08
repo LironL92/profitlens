@@ -5,26 +5,10 @@ import { headers } from 'next/headers'
 // Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// Rate limiting helper
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
-
+// Rate limiting helper (simplified for production)
 function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const windowMs = 15 * 60 * 1000 // 15 minutes
-  const maxRequests = 5 // 5 requests per 15 minutes
-
-  const record = rateLimitMap.get(ip)
-  
-  if (!record || now > record.resetTime) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs })
-    return true
-  }
-
-  if (record.count >= maxRequests) {
-    return false
-  }
-
-  record.count++
+  // For now, disable rate limiting in production to avoid issues
+  // TODO: Implement proper rate limiting with Redis or similar
   return true
 }
 
@@ -41,12 +25,14 @@ export async function POST(request: NextRequest) {
 
     // Get request metadata
     const headersList = await headers()
-    const ip = headersList.get('x-forwarded-for') || 
-               headersList.get('x-real-ip') || 
+    const forwardedFor = headersList.get('x-forwarded-for')
+    const realIp = headersList.get('x-real-ip')
+    const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 
+               realIp || 
                'unknown'
     const userAgent = headersList.get('user-agent') || 'unknown'
 
-    // Rate limiting
+    // Rate limiting (disabled for now)
     if (!checkRateLimit(ip)) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },

@@ -1,10 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { ArrowRight, Calculator, TrendingUp, Clock } from 'lucide-react'
 import WaitlistForm from '@/components/WaitlistForm'
 import WaitlistAnalytics from '@/components/WaitlistAnalytics'
 
 export default function OnlyFansCreatorLandingPage() {
+  const [waitlistCount, setWaitlistCount] = useState<string>('500+')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
@@ -146,27 +148,16 @@ export default function OnlyFansCreatorLandingPage() {
         <div className="mt-20 bg-gradient-to-r from-pink-500 to-purple-600 rounded-2xl p-8 md:p-12 text-white">
           <div className="text-center">
             <h2 className="text-3xl font-bold mb-8">
-              Join 500+ Creators Already on the Waitlist
+              Join {waitlistCount} Creators Already on the Waitlist
             </h2>
             
             {/* Analytics Stats */}
             <div className="mb-8">
-              <WaitlistAnalytics />
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-8 text-left">
-              <div className="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
-                <p className="text-lg italic mb-4">
-                  &quot;Finally stopped getting blindsided by quarterly payments. Now I actually know my real profit margins instead of just hoping.&quot;
-                </p>
-                <p className="font-semibold">— Maya, Top 1% Creator</p>
-                </div>
-              <div className="bg-white/10 rounded-lg p-6 backdrop-blur-sm">
-                <p className="text-lg italic mb-4">
-                  &quot;My accountant finally treats me like a real business owner instead of some girl with a webcam.&quot;
-                </p>
-                <p className="font-semibold">— Alex, 6-Figure Creator</p>
-              </div>
+              <WaitlistAnalytics onStatsLoaded={(stats) => {
+                if (stats.totalSignups) {
+                  setWaitlistCount(`${stats.totalSignups.toLocaleString()}+`)
+                }
+              }} />
             </div>
           </div>
         </div>

@@ -13,7 +13,11 @@ interface WaitlistStats {
   }>
 }
 
-export default function WaitlistAnalytics() {
+interface WaitlistAnalyticsProps {
+  onStatsLoaded?: (stats: WaitlistStats) => void
+}
+
+export default function WaitlistAnalytics({ onStatsLoaded }: WaitlistAnalyticsProps) {
   const [stats, setStats] = useState<WaitlistStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -27,6 +31,10 @@ export default function WaitlistAnalytics() {
       if (response.ok) {
         const data = await response.json()
         setStats(data)
+        // Call the callback with the loaded stats
+        if (onStatsLoaded) {
+          onStatsLoaded(data)
+        }
       }
     } catch (error) {
       console.error('Failed to fetch waitlist stats:', error)

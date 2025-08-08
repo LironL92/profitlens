@@ -35,19 +35,18 @@ export default function OnlyFansCreatorLandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50">
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-sm border-b border-pink-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full" />
-              <span className="ml-2 text-xl font-semibold text-gray-900">ProfitLens</span>
-        </div>
-            <div className="text-sm text-gray-600 font-medium">
-              For OnlyFans Creators
-            </div>
-          </div>
-    </div>
-      </header>
+             <header className="bg-gray-900 border-b border-gray-800">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="flex justify-between items-center py-2">
+             <div className="flex items-center">
+               <img src="/logo.svg" alt="ProfitLens" className="h-32 w-32" />
+             </div>
+             <div className="text-sm text-gray-300 font-medium">
+               For OnlyFans Creators
+             </div>
+           </div>
+     </div>
+       </header>
 
       {/* Hero Section */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -306,8 +305,7 @@ export default function OnlyFansCreatorLandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-600 rounded-full" />
-              <span className="ml-2 text-xl font-semibold">ProfitLens</span>
+              <img src="/logo-white.svg" alt="ProfitLens" className="h-32 w-32" />
             </div>
             <p className="text-gray-400 mb-4">
               Financial management built for OnlyFans creators

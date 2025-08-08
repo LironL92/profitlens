@@ -3,6 +3,11 @@
 import { useState } from 'react'
 import { ArrowRight, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
+// Declare gtag as a global function
+declare global {
+  function gtag(...args: any[]): void
+}
+
 interface WaitlistFormProps {
   className?: string
   variant?: 'hero' | 'footer'

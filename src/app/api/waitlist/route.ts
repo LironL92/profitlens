@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Check if email already exists
     const { data: existingSignup } = await supabase
-      .from('waitlist_signups')
+      .from('waitlist')
       .select('email, created_at')
       .eq('email', email.toLowerCase())
       .single()
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     // Insert new signup with enhanced tracking
     const { data: newSignup, error: insertError } = await supabase
-      .from('waitlist_signups')
+      .from('waitlist')
       .insert({
         email: email.toLowerCase(),
         source,
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         referral_source: referralSource,
         ip_address: ip,
         user_agent: userAgent,
-        email_confirmed: false,
+        confirmed: false,
         // Additional UTM tracking
         utm_source: utmSource,
         utm_medium: utmMedium,
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     // Get waitlist position for social proof
     const { count } = await supabase
-      .from('waitlist_signups')
+      .from('waitlist')
       .select('*', { count: 'exact', head: true })
 
     // Generate confirmation token
@@ -187,8 +187,8 @@ export async function GET(request: NextRequest) {
 
       // Confirm email
       await supabaseAdmin
-        .from('waitlist_signups')
-        .update({ email_confirmed: true })
+        .from('waitlist')
+        .update({ confirmed: true })
         .eq('email', tokenData.email)
 
       // Delete used token
@@ -202,10 +202,10 @@ export async function GET(request: NextRequest) {
 
     // Get waitlist stats (requires admin authentication in production)
     const { data: signups, count } = await supabaseAdmin
-      .from('waitlist_signups')
+      .from('waitlist')
       .select('*', { count: 'exact' })
 
-    const confirmedCount = signups?.filter(s => s.email_confirmed).length || 0
+    const confirmedCount = signups?.filter(s => s.confirmed).length || 0
     const recentCount = signups?.filter(s => 
       new Date(s.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     ).length || 0

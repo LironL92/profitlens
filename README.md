@@ -1,29 +1,31 @@
-# ProfitLens - OnlyFans Creator Waitlist Landing Page
+# ProfitLens Waitlist
 
-A complete Next.js 14 application for collecting waitlist signups for ProfitLens, a financial dashboard specifically designed for OnlyFans creators.
+A modern waitlist landing page for ProfitLens, built with Next.js and Supabase.
 
-![ProfitLens Landing Page](https://via.placeholder.com/800x400/ec4899/ffffff?text=ProfitLens+Landing+Page)
+## Features
 
-## 🚀 Features
+- 🎯 **Modern Landing Page** - Beautiful, responsive design for OnlyFans creators
+- 📧 **Email Collection** - Secure waitlist signup with duplicate prevention
+- 📊 **Analytics Ready** - UTM tracking and referral source monitoring
+- 🔒 **Secure** - Server-side validation and rate limiting
+- ⚡ **Fast** - Built with Next.js 15 and optimized for performance
 
-- **Conversion-Optimized Landing Page**: Hero, problem, solution, social proof, and pricing sections
-- **Waitlist Management**: Email collection with duplicate detection and position tracking
-- **Email Confirmation**: Optional token-based email verification system
-- **Admin Dashboard**: View signup statistics and manage the waitlist
-- **Supabase Integration**: PostgreSQL database with real-time capabilities
-- **Mobile-First Design**: Responsive design using Tailwind CSS
-- **TypeScript**: Full type safety throughout the application
+## Tech Stack
 
-## 🛠️ Tech Stack
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Row Level Security)
+- **Deployment**: Vercel
+- **Styling**: Tailwind CSS with custom gradients and animations
 
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS with custom brand colors
-- **Database**: Supabase (PostgreSQL)
-- **Icons**: Lucide React
-- **Deployment**: Vercel-ready
+## Getting Started
 
-## 📦 Installation
+### Prerequisites
+
+- Node.js 18+ 
+- Supabase account
+- Vercel account (for deployment)
+
+### Local Development
 
 1. **Clone the repository**
    ```bash
@@ -37,360 +39,106 @@ A complete Next.js 14 application for collecting waitlist signups for ProfitLens
    ```
 
 3. **Set up environment variables**
-   
-   Create a `.env.local` file in the root directory:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+   Create a `.env.local` file:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    ```
 
-4. **Set up Supabase database**
-   
-   Run the following SQL in your Supabase SQL editor:
-
-   ```sql
-   -- Create waitlist_signups table
-   CREATE TABLE waitlist_signups (
-     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-     email VARCHAR(255) NOT NULL UNIQUE,
-     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-     source VARCHAR(50) DEFAULT 'landing_page',
-     creator_type VARCHAR(50) DEFAULT 'onlyfans',
-     estimated_monthly_revenue INTEGER,
-     referral_source VARCHAR(100),
-     email_confirmed BOOLEAN DEFAULT FALSE,
-     ip_address INET,
-     user_agent TEXT
-   );
-
-   -- Create email_confirmation_tokens table
-   CREATE TABLE email_confirmation_tokens (
-     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-     email VARCHAR(255) NOT NULL REFERENCES waitlist_signups(email),
-     token VARCHAR(255) NOT NULL UNIQUE,
-     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
-
-   -- Create indexes for better performance
-   CREATE INDEX idx_waitlist_signups_email ON waitlist_signups(email);
-   CREATE INDEX idx_waitlist_signups_created_at ON waitlist_signups(created_at);
-   CREATE INDEX idx_confirmation_tokens_token ON email_confirmation_tokens(token);
-   CREATE INDEX idx_confirmation_tokens_expires_at ON email_confirmation_tokens(expires_at);
-
-   -- Enable Row Level Security
-   ALTER TABLE waitlist_signups ENABLE ROW LEVEL SECURITY;
-   ALTER TABLE email_confirmation_tokens ENABLE ROW LEVEL SECURITY;
-
-   -- Create RLS policies
-   -- Allow public to insert new signups
-   CREATE POLICY "Allow public to insert waitlist signups" ON waitlist_signups
-   FOR INSERT TO anon, authenticated WITH CHECK (true);
-
-   -- Allow public to read their own signup
-   CREATE POLICY "Allow users to view their own signup" ON waitlist_signups
-   FOR SELECT TO anon, authenticated USING (true);
-
-   -- Service role can do everything
-   CREATE POLICY "Service role can manage all signups" ON waitlist_signups
-   FOR ALL TO service_role USING (true);
-
-   CREATE POLICY "Service role can manage all tokens" ON email_confirmation_tokens
-   FOR ALL TO service_role USING (true);
-
-   -- Optional: Create a function to get waitlist statistics
-   CREATE OR REPLACE FUNCTION get_waitlist_stats()
-   RETURNS JSON AS $$
-   DECLARE
-     total_count INTEGER;
-     confirmed_count INTEGER;
-     recent_count INTEGER;
-     result JSON;
-   BEGIN
-     SELECT COUNT(*) INTO total_count FROM waitlist_signups;
-     SELECT COUNT(*) INTO confirmed_count FROM waitlist_signups WHERE email_confirmed = true;
-     SELECT COUNT(*) INTO recent_count FROM waitlist_signups 
-     WHERE created_at > NOW() - INTERVAL '7 days';
-     
-     result := json_build_object(
-       'total_signups', total_count,
-       'confirmed_signups', confirmed_count,
-       'recent_signups', recent_count
-     );
-     
-     RETURN result;
-   END;
-   $$ LANGUAGE plpgsql SECURITY DEFINER;
-   ```
-
-5. **Run the development server**
+4. **Start development server**
    ```bash
    npm run dev
    ```
 
-6. **Open your browser**
-   
-   Visit [http://localhost:3000](http://localhost:3000) to see the landing page.
+5. **Open your browser**
+   Navigate to `http://localhost:3000`
 
-## 📱 Pages & Routes
+## Database Setup
 
-- `/` - Main landing page with waitlist signup
-- `/waitlist/confirmed` - Email confirmation success page
-- `/waitlist/invalid` - Invalid confirmation token page
-- `/admin` - Admin dashboard for viewing signups
-- `/api/waitlist` - API endpoint for waitlist operations
+The application expects a `waitlist` table in Supabase with the following structure:
 
-## 🎨 Design System
-
-### Colors
-- **Brand Pink**: `#ec4899`
-- **Brand Purple**: `#8b5cf6`
-
-### Custom CSS Classes
-- `.gradient-text` - Pink to purple gradient text
-- `.gradient-bg` - Pink to purple to indigo gradient background
-- `.btn-primary` - Primary gradient button
-- `.btn-secondary` - Secondary white button
-- `.card` - White card with shadow and hover effects
-
-## 🔌 API Endpoints
-
-### POST /api/waitlist
-Add a new email to the waitlist.
-
-**Request Body:**
-```json
-{
-  "email": "creator@example.com",
-  "source": "landing_page",
-  "creatorType": "onlyfans",
-  "estimatedRevenue": 5000,
-  "referralSource": "twitter"
-}
+```sql
+CREATE TABLE waitlist (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    source VARCHAR(50) DEFAULT 'landing_page',
+    referrer TEXT,
+    utm_source VARCHAR(100),
+    utm_medium VARCHAR(100),
+    utm_campaign VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    confirmed BOOLEAN DEFAULT FALSE
+);
 ```
 
-**Success Response (201):**
-```json
-{
-  "success": true,
-  "message": "Welcome to the waitlist!",
-  "waitlistPosition": 127,
-  "confirmationToken": "uuid-token"
-}
-```
-
-**Error Response (409 - Duplicate):**
-```json
-{
-  "error": "You're already on the waitlist!",
-  "isAlreadySignedUp": true
-}
-```
-
-### GET /api/waitlist
-Get waitlist statistics or handle email confirmation.
-
-**Query Parameters:**
-- `action=confirm&token=uuid` - Confirm email address
-- No parameters - Get waitlist stats (admin)
-
-**Stats Response:**
-```json
-{
-  "totalSignups": 500,
-  "confirmedSignups": 350,
-  "recentSignups": 47,
-  "topReferralSources": [
-    { "source": "twitter", "count": 150 },
-    { "source": "direct", "count": 200 }
-  ]
-}
-```
-
-## 🔒 Security Considerations
-
-### For Production Deployment:
-
-1. **Admin Route Protection**
-   ```typescript
-   // Add authentication middleware to /admin
-   import { auth } from '@/lib/auth'
-   
-   export default async function AdminPage() {
-     const session = await auth()
-     if (!session?.user?.role === 'admin') {
-       redirect('/login')
-     }
-     // ... rest of component
-   }
-   ```
-
-2. **Rate Limiting**
-   ```typescript
-   // Add rate limiting to API routes
-   import { rateLimit } from '@/lib/rate-limit'
-   
-   export async function POST(request: NextRequest) {
-     const identifier = getClientId(request)
-     const { success } = await rateLimit.limit(identifier)
-     
-     if (!success) {
-       return NextResponse.json(
-         { error: 'Too many requests' },
-         { status: 429 }
-       )
-     }
-     // ... rest of handler
-   }
-   ```
-
-3. **Environment Variables**
-   - Never commit `.env.local` to version control
-   - Use strong, unique passwords for service role keys
-   - Rotate API keys regularly
-
-4. **Database Security**
-   - Review and test RLS policies
-   - Use least-privilege principle for API keys
-   - Enable audit logging in Supabase
-
-## 🚀 Deployment
+## Deployment
 
 ### Deploy to Vercel
 
-1. **Connect your repository to Vercel**
-2. **Add environment variables in Vercel dashboard**
-3. **Deploy**
+1. **Push to GitHub**
    ```bash
-   npm run build
+   git add .
+   git commit -m "Ready for production"
+   git push origin main
    ```
+
+2. **Connect to Vercel**
+   - Go to [vercel.com](https://vercel.com)
+   - Import your GitHub repository
+   - Add environment variables in Vercel dashboard
+   - Deploy!
 
 ### Environment Variables for Production
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+Set these in your Vercel dashboard:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+## Project Structure
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/waitlist/      # API endpoints
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout
+│   └── page.tsx           # Landing page
+├── components/            # React components
+│   ├── WaitlistForm.tsx   # Email signup form
+│   └── WaitlistAnalytics.tsx # Analytics display
+└── lib/                   # Utilities
+    ├── supabase.ts        # Supabase client
+    └── analytics.ts       # Analytics helpers
 ```
 
-## 📊 Monitoring & Analytics
+## Customization
 
-### Recommended Integrations:
+### Styling
+- Colors and gradients are defined in `src/app/globals.css`
+- Component styles use Tailwind CSS classes
+- Custom animations are in the component files
 
-1. **Google Analytics 4**
-   ```typescript
-   // Add to layout.tsx
-   import { GoogleAnalytics } from '@next/third-parties/google'
-   
-   export default function RootLayout() {
-     return (
-       <html>
-         <body>
-           {children}
-           <GoogleAnalytics gaId="GA_MEASUREMENT_ID" />
-         </body>
-       </html>
-     )
-   }
-   ```
+### Content
+- Update copy in `src/app/page.tsx`
+- Modify form behavior in `src/components/WaitlistForm.tsx`
+- Adjust API logic in `src/app/api/waitlist/route.ts`
 
-2. **Supabase Analytics**
-   - Monitor API usage in Supabase dashboard
-   - Set up alerts for high error rates
-   - Track conversion funnel metrics
+## Monitoring
 
-3. **Error Monitoring**
-   ```bash
-   npm install @sentry/nextjs
-   ```
+- **Supabase Dashboard**: Monitor signups and database performance
+- **Vercel Analytics**: Track page views and performance
+- **Browser Console**: Check for client-side errors
 
-## 🧪 Testing
+## Support
 
-### Test the Waitlist Flow:
-
-1. **Happy Path**
-   - Submit email on landing page
-   - Verify success message appears
-   - Check database for new record
-   - Test duplicate email handling
-
-2. **Error Cases**
-   - Invalid email format
-   - Network connection errors
-   - Database connection issues
-
-3. **Admin Dashboard**
-   - Verify stats display correctly
-   - Test refresh functionality
-   - Check responsive design
-
-### Manual Testing Checklist:
-
-- [ ] Landing page loads without errors
-- [ ] Email form submits successfully  
-- [ ] Duplicate emails show friendly message
-- [ ] Data appears in Supabase dashboard
-- [ ] Mobile responsive on all screen sizes
-- [ ] API endpoints return proper responses
-- [ ] Environment variables work correctly
-- [ ] Build and deployment succeed
-
-## 🎯 Marketing Features
-
-### A/B Testing Setup:
-```typescript
-// Add to page.tsx for testing headlines
-const headlines = {
-  control: "Finally, Financial Control",
-  variant: "Take Control of Your Creator Finances"
-}
-
-const headline = useABTest('hero-headline', headlines)
-```
-
-### Social Sharing:
-```typescript
-// Add social share buttons
-const shareUrl = `https://profitlens.com`
-const shareText = `Join me on the ProfitLens waitlist - the financial dashboard built for OnlyFans creators!`
-```
-
-## 🔧 Customization
-
-### Update Brand Colors:
-```javascript
-// tailwind.config.js
-colors: {
-  'brand-pink': '#your-pink-color',
-  'brand-purple': '#your-purple-color',
-}
-```
-
-### Modify Copy:
-All copy is in the main page component (`src/app/page.tsx`). Update headlines, descriptions, and testimonials as needed.
-
-### Add New Sections:
-```typescript
-// Add after existing sections
-<section className="section-padding bg-white">
-  <div className="container-custom">
-    {/* Your new section content */}
-  </div>
-</section>
-```
-
-## 📞 Support
-
-For questions about this implementation:
-
-1. Check the [Supabase documentation](https://supabase.com/docs)
-2. Review [Next.js 14 docs](https://nextjs.org/docs)
-3. Submit issues in this repository
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+For issues or questions:
+- Check the Supabase logs for database errors
+- Review Vercel deployment logs for build issues
+- Email support@profitlens.co for assistance
 
 ---
 
-**Built with ❤️ for OnlyFans creators who deserve better financial tools.**
+Built with ❤️ for OnlyFans creators
